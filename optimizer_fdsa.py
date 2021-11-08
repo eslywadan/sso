@@ -1,28 +1,6 @@
-from simulation import Simulation, Scatter2Dims
+from simulation import Simulation, IMPOptMea
 import numpy as np
 from matplotlib import pyplot as plt
-
-
-class IMPOptMea:
-    """Record Set Store the Optimizer Hist for Inv Man Policy (s,S)"""
-    pid = None
-
-    def __init__(self, **kwargs):
-        self.measure = []
-        self.theta1 = []
-        self.theta2 = []
-        self.min_s = []
-        self.max_s = []
-        self.demand_total = []
-        self.demand_fulfill = []
-        self.back_order_total = []
-        self.total_cost = []
-        self.total_holding_cost = []
-        self.total_po_cost = []
-        self.cum_otd = []
-
-    def append_rec(self, **kwargs):
-        pass
 
 
 class OptimizeTotalCostFDSA(Simulation):
@@ -46,7 +24,7 @@ class OptimizeTotalCostFDSA(Simulation):
         self.opt_hist_min_s = []
         self.opt_hist_max_s = []
         self.sim_hist = []
-        self.min_cost = 0
+        self.min_cost = None
         self.model.init_ss(int(np.random.uniform(1000, 3000, 1)), use_the_last_best=use_the_last_best)
         self.print_res = False
         while self.top_measure <= max_measure:
@@ -190,3 +168,7 @@ class OptimizeTotalCostFDSA(Simulation):
         gd_max_s = (y2p["cum_cost"] - y2n["cum_cost"]) / (2*ck)
         self.model.reset_im_policy(min_s_max_s_set0)   # set back to original im policy
         return {"im_min_s_gd": gd_min_s, "im_max_s_gd": gd_max_s}
+
+
+
+

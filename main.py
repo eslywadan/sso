@@ -1,5 +1,7 @@
 from simulation import Scatter2Dims
-from optimizer_sso import OptimizeTotalCostFDSA
+from optimizer_fdsa import OptimizeTotalCostFDSA
+from optimizer_spsa import OptimizeTotalCostSPSA
+from optimizer_gene import OptimizeTotalCostGene
 
 
 class PlanEnv:
@@ -31,20 +33,57 @@ def singleprodfixdemandfdsa(regen_count=10):
         
         Scatter2Dims.plot_dist_scatter(opt.opt_hist_min_s, opt.opt_hist_max_s)
 
-    dummy()
-
 
 def dummy():
     print("break")
 
 
 # Press the green button in the gutter to run the script.
+def singleprodfixdemandspsa(regen_count=10):
+    plan_env = PlanEnv
+    opt2 = OptimizeTotalCostSPSA(p1=plan_env.env_set, p2=plan_env.cost_set, p3=plan_env.stochastic_set,
+                                p4=plan_env.min_s_max_s_set)
+    opt2.regen_count = 0
+    while opt2.regen_count < regen_count:
+        opt2.spsa(max_measure=300)
+        opt2.regen_count += 1
+        opt2.regen_hist.append(
+            {"Regen Count": opt2.regen_count, "Min Cost Measure": opt2.min_cost_measure, "Min Cost": opt2.min_cost})
+        print(f"regen count: {regen_count}\n"
+              f"min cost: {opt2.min_cost}\n"
+              f"min cost measure: {opt2.min_cost_measure}\n"
+              f"min cost min s {opt2.min_cost_im_min_s}\n"
+              f"min cost max s {opt2.min_cost_im_max_s}\n")
+    dummy()
+
+
+def singleprodfixdemandgene(regen_count=10):
+    plan_env = PlanEnv
+    opt3 = OptimizeTotalCostGene(p1=plan_env.env_set, p2=plan_env.cost_set, p3=plan_env.stochastic_set,
+                                p4=plan_env.min_s_max_s_set)
+    opt3.regen_count = 0
+    while opt3.regen_count < regen_count:
+        opt3.gene(max_measure=300)
+        opt3.regen_count += 1
+        opt3.regen_hist.append(
+            {"Regen Count": opt3.regen_count, "Min Cost Measure": opt3.min_cost_measure, "Min Cost": opt3.min_cost})
+        print(f"regen count: {regen_count}\n"
+              f"min cost: {opt3.min_cost}\n"
+              f"min cost measure: {opt3.min_cost_measure}\n"
+              f"min cost min s {opt3.min_cost_im_min_s}\n"
+              f"min cost max s {opt3.min_cost_im_max_s}\n")
+    dummy()
+
 if __name__ == '__main__':
     # Scatter2Dims.plot_stochastic_demand_lt_scatter()
     # Scatter2Dims.plot_normal_scatter()
     # dummy()
     # Segmenting initial setting into 4 types
 
-    singleprodfixdemandfdsa(regen_count=5)
+    # singleprodfixdemandfdsa(regen_count=5)
+
+    # singleprodfixdemandspsa(regen_count=1)
+
+    singleprodfixdemandgene(regen_count=1)
 
     dummy()

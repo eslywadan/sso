@@ -4,11 +4,33 @@ from inventory_model import InvMdlSingle, GenLeadTime, GenDemand
 from visualize import VisualizeModel
 
 
+class IMPOptMea:
+    """Record Set Store the Optimizer Hist for Inv Man Policy (s,S)"""
+    pid = None
+
+    def __init__(self, **kwargs):
+        self.measure = []
+        self.theta1 = []
+        self.theta2 = []
+        self.min_s = []
+        self.max_s = []
+        self.demand_total = []
+        self.demand_fulfill = []
+        self.back_order_total = []
+        self.total_cost = []
+        self.total_holding_cost = []
+        self.total_po_cost = []
+        self.cum_otd = []
+
+    def append_rec(self, **kwargs):
+        pass
+
+
 class Simulation:
     """The Simulation Class (1) feasible solution
                             (2) Optimal solution """
     sim_measure = None
-    sim_hist = None
+    sim_hist = []
 
     def __init__(self, p1, p2, p3, p4):
         self.model = InvMdlSingle(p1, p2, p3, p4)

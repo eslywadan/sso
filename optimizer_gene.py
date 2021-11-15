@@ -4,17 +4,42 @@ import numpy as np
 
 
 class Chromosome:
-    def __init__(self, generation):
-        self.gen = generation
-        self.theta_min_s = 0
-        self.theta_max_s = 0
+    def __init__(self,theta1, theta2):
+        self.theta_min_s = theta1
+        self.theta_max_s = theta2
+
+
+class Chromosomes:
+
+    def __init__(self,cost=None, theta_min_s=0, theta_max_s=0) :
+        self.cost = cost
+        self.chromosome = Chromosome(theta_min_s, theta_max_s)
+
+    def crossover(self):
+        pass
+
+    def mutation(self):
+        pass
 
 
 class Population:
-    chromosome: Chromosome
 
-    def __init__(self, generation):
-        self.chromosome = Chromosome(generation)
+    def __init__(self, cr=10, cc=10, cm=10):
+        self.pop_random_max_num = cr
+        self.pop_crossover_max_num = cc
+        self.pop_mutation_max_num = cm
+        self.random = set()
+        self.cross_over = set()
+        self.mutation = set()
+
+    def add_random(self):
+        while len(self.random) < self.pop_random_max_num:
+            theta_min_s = np.random.uniform(0, 1000, size=1)
+            theta_max_s = np.random.uniform(0, 2000, size=1)
+            self.random.add(Chromosome(theta_min_s, theta_max_s))
+
+    def add_crossover(self):
+        self.cross_over.add(Chromosomes(self))
 
 
 class Generation:
@@ -23,7 +48,6 @@ class Generation:
     best_pop: Population
 
     def __init__(self,generation):
-        self.pop = Population(generation)
         self.gens = generation
 
 
@@ -39,6 +63,8 @@ class OptimizeTotalCostGene(Simulation, Generation):
         Simulation.__init__(self, p1, p2, p3, p4)
         self.regen_hist = []
         self.sim_init()
+        self.chromosome_all_gen_pools = []
+        self.chromosome_cur_pop_pools = []
 
     def gene(self,max_measure=100):
         """The function will keep the best solution for accumulated generations"""
@@ -76,8 +102,8 @@ class OptimizeTotalCostGene(Simulation, Generation):
                 self.gene_latest_best_measure = self.top_measure
                 self.gen_best_chromosome = self.cur_pop_best_chromosome
                 self.min_cost_measure = self.top_measure
-                new_min_s = self.model.min_s_lower_bound + self.gen_best_chromosome["theta1"]
-                new_max_s = new_min_s + self.gen_best_chromosome["theta2"]
+                new_min_s = self.model.min_s_lower_bound + self.gen_best_chromosome.chromosome.theta_min_s
+                new_max_s = new_min_s + self.gen_best_chromosome.chromosome.theta_max_s
                 self.min_cost_im_min_s = new_min_s
                 self.min_cost_im_max_s = new_max_s
 
@@ -123,20 +149,27 @@ class OptimizeTotalCostGene(Simulation, Generation):
                 self.cur_pop_best = yk_new["cum_cost"]
             if yk_new["cum_cost"] < self.cur_pop_best:
                 self.cur_pop_best = yk_new["cum_cost"]
-                self.cur_pop_best_chromosome = {"theta1":self.theta_min_s, "theta2": self.theta_max_s}
+                # self.cur_pop_best_chromosome = {f"cost:{self.cur_pop_best}, theta1:{self.theta_min_s}, theta2:{self.theta_max_s}"}
+                self.cur_pop_best_chromosome = Chromosomes(self.cur_pop_best, self.theta_min_s, self.theta_max_s)
                 print(f"S2:New Theta has committed the Cumulative OTD rate and lower cost, sol accept~")
                 self.pop_count += 1
                 continue
 
-        if self.cur_pop_best:
-            self.add_candidate(self.cur_pop_best_chromosome)
+        if self.cur_pop_best and self.cur_pop_best_chromosome is not None:
+            self.add_candidate("cur_pop", self.cur_pop_best_chromosome)
             self.gen_res = "S2"
 
     def pop_candidate(self):
         self.theta_min_s = np.random.uniform(0, 1000, size=1)
         self.theta_max_s = np.random.uniform(0, 2000, size=1)
 
-    def add_candidate(self, candidate: Chromosome):
-        pass
+    def add_candidate(self, base_line, chromosome):
+        sol = chromosome
+        if base_line == "all_gen":
+            self.chromosome_all_gen_pools.append(sol)
+        if base_line == "cur_pop":
+            self.chromosome_cur_pop_pools.append(sol)
+
+
 
 

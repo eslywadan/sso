@@ -24,7 +24,8 @@ class Chromosomes:
 
 class Population:
 
-    def __init__(self, cr=10, cc=10, cm=10):
+    def __init__(self, generation, cr=10, cc=10, cm=10):
+        self.generation = generation
         self.pop_random_max_num = cr
         self.pop_crossover_max_num = cc
         self.pop_mutation_max_num = cm
@@ -36,10 +37,18 @@ class Population:
         while len(self.random) < self.pop_random_max_num:
             theta_min_s = np.random.uniform(0, 1000, size=1)
             theta_max_s = np.random.uniform(0, 2000, size=1)
-            self.random.add(Chromosome(theta_min_s, theta_max_s))
+            random_chromo = Chromosomes(cost=None, *theta_min_s, *theta_max_s)
+            self.random.add( random_chromo )
 
-    def add_crossover(self):
-        self.cross_over.add(Chromosomes(self))
+    def add_crossover(self,cost,theta_min_s, theta_max_s):
+        while len(self.cross_over) < self.pop_crossover_max_num:
+            cross_over_chromo = Chromosomes(cost=cost, *theta_min_s, *theta_max_s)
+            self.cross_over.add( cross_over_chromo )
+
+    def add_mutation(self,cost,theta_min_s, theta_max_s):
+        while len(self.mutation) < self.pop_mutation_max_num:
+            mutate_chromo = Chromosomes(cost=cost, *theta_min_s, *theta_max_s)
+            self.mutation.add( mutate_chromo )
 
 
 class Generation:
@@ -49,6 +58,7 @@ class Generation:
 
     def __init__(self,generation):
         self.gens = generation
+        self.pop = Population()
 
 
 class OptimizeTotalCostGene(Simulation, Generation):

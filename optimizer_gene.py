@@ -1,25 +1,55 @@
 from simulation import Simulation, IMPOptMea
-from matplotlib import pyplot as plt
 import numpy as np
+import random
 
 
 class Chromosome:
-    def __init__(self,theta1, theta2):
-        self.theta_min_s = theta1
-        self.theta_max_s = theta2
+    def __init__(self, gentype=1):
+        self.gentype = gentype
+        if self.gentype == 1:
+            self.random()
+        if self.gentype == 2:
+            self.crossover()
+        if self.gentype == 3:
+            self.mutation()
+
+    def random(self):
+        self.theta_min_s = np.random.uniform(0, 1000, size=1)
+        self.theta_max_s = np.random.uniform(0, 2000, size=1)
+
+    def crossover(self, genrepo):
+        max_ix = len(genrepo.gensol)-1
+        if max_ix <= 0:
+            self.random()
+            return
+        xc = random.randint(0, max_ix)
+        yc = random.randint(0, max_ix)
+        new_x = genrepo.gensol[xc]
+        new_y = genrepo.gensol[yc]
+        self.theta_min_s = new_x[0].theta_min_s
+        self.theta_max_s = new_y[0].theta_max_s
+
+    def mutation(self, genrepo):
+        max_ix = len(genrepo.gensol)-1
+        if max_ix <= 0:
+            self.random()
+            return
+        xc = random.randint(0, max_ix)
+        new_ch = genrepo.gensol[xc]
+        si = random.randint(0,1)
+        if si == 0:
+            self.theta_min_s = new_ch[0].theta_min_s
+            self.theta_max_s = np.random.uniform(0, 2000, size=1)
+        if si == 1:
+            self.theta_min_s = np.random.uniform(0, 1000, size=1)
+            self.theta_max_s = new_ch[0].theta_max_s
 
 
 class Chromosomes:
 
-    def __init__(self,cost=None, theta_min_s=0, theta_max_s=0) :
+    def __init__(self,chromo: Chromosome, cost=None) :
         self.cost = cost
-        self.chromosome = Chromosome(theta_min_s, theta_max_s)
-
-    def crossover(self):
-        pass
-
-    def mutation(self):
-        pass
+        self.chromosome = chromo
 
 
 class Population:
@@ -29,26 +59,33 @@ class Population:
         self.pop_random_max_num = cr
         self.pop_crossover_max_num = cc
         self.pop_mutation_max_num = cm
-        self.random = set()
-        self.cross_over = set()
-        self.mutation = set()
+        self.random = []
+        self.cross_over = []
+        self.mutation = []
 
-    def add_random(self):
-        while len(self.random) < self.pop_random_max_num:
-            theta_min_s = np.random.uniform(0, 1000, size=1)
-            theta_max_s = np.random.uniform(0, 2000, size=1)
-            random_chromo = Chromosomes(cost=None, *theta_min_s, *theta_max_s)
-            self.random.add( random_chromo )
+    def add_random(self, size=None):
+        if size is None:
+            size = self.pop_random_max_num
+        while len(self.random) < size:
+            chromo = Chromosome(1)
+            random_chromo = Chromosomes(chromo, cost=None)
+            self.random.append(random_chromo)
 
-    def add_crossover(self,cost,theta_min_s, theta_max_s):
-        while len(self.cross_over) < self.pop_crossover_max_num:
-            cross_over_chromo = Chromosomes(cost=cost, *theta_min_s, *theta_max_s)
-            self.cross_over.add( cross_over_chromo )
+    def add_crossover(self, genrepo, size=None):
+        if size is None:
+            size = self.pop_crossover_max_num
+        while len(self.cross_over) < size:
+            chromo = Chromosome()
+            cross_over_chromo = Chromosomes(chromo.crossover(genrepo), cost=None)
+            self.cross_over.append(cross_over_chromo)
 
-    def add_mutation(self,cost,theta_min_s, theta_max_s):
-        while len(self.mutation) < self.pop_mutation_max_num:
-            mutate_chromo = Chromosomes(cost=cost, *theta_min_s, *theta_max_s)
-            self.mutation.add( mutate_chromo )
+    def add_mutation(self,genrepo, size=None):
+        if size is None:
+            size = self.pop_mutation_max_num
+        while len(self.mutation) < size:
+            chromo = Chromosome()
+            mutate_chromo = Chromosomes(chromo.mutation(genrepo), cost=None)
+            self.mutation.append( mutate_chromo )
 
 
 class Generation:
@@ -58,10 +95,37 @@ class Generation:
 
     def __init__(self,generation):
         self.gens = generation
-        self.pop = Population()
+        self.pop = Population(generation, cr=10, cc=10, cm=10)
+        self.gensol = []
 
 
-class OptimizeTotalCostGene(Simulation, Generation):
+class Genrepo(Generation):
+    """Genrepo is treated as a particular generation"""
+
+    def __init__(self, max_pool):
+        self.gens = 0
+        self.max_pool = max_pool
+        self.gensol = []
+
+    def add_sol(self, sols):
+        before_num = len(self.gensol)
+        for sol in sols:
+            self.gensol.append(sol)
+
+        after_num = len(self.gensol)
+        if after_num <= before_num:
+            print(f"Original gensol {before_num}")
+            print(f"After gensol {after_num}")
+            breakpoint()
+
+        self.prun_sol()
+
+    def prun_sol(self):
+        sols = sorted(self.gensol, key=lambda s: s[1])
+        self.gensol = sols[0:self.max_pool-1]
+
+
+class OptToCostGene(Simulation, Generation):
 
     imp_opt_mea = IMPOptMea
     generation: Generation
@@ -73,113 +137,57 @@ class OptimizeTotalCostGene(Simulation, Generation):
         Simulation.__init__(self, p1, p2, p3, p4)
         self.regen_hist = []
         self.sim_init()
-        self.chromosome_all_gen_pools = []
-        self.chromosome_cur_pop_pools = []
-
-    def gene(self,max_measure=100):
-        """The function will keep the best solution for accumulated generations"""
-        self.gene_seq = []
-        self.top_measure = 0
-        self.sim_measure = 0
-        self.min_cost_measure = self.top_measure
-        self.min_cost = None
-        self.min_cost_im_min_s = None
-        self.min_cost_im_max_s = None
-        self.gene_dim = 2
         self.cotd_threshold = 0.9
-        self.gene_latest_best = 0.0
-        self.gene_latest_best_measure = 0
-        self.opt_hist_tc = []
-        self.opt_hist_min_s = []
-        self.opt_hist_max_s = []
 
-        self.gene = 0
-        self.gen_best_chromosome = None
+    def init_genrepo(self, max_iter, max_pool):
+        self.generation = Generation(0)
+        self.generation.pop.add_random(max_iter)
+        self.sim_gens(self.generation.pop.random)
+        self.genrepo = Genrepo(max_pool)
+        self.genrepo.add_sol(self.generation.gensol)
 
-        while self.top_measure <= max_measure:   # max_measure restrict the max measure of generation
-            self.opt_ss_gene()
-            if self.top_measure == 1:
-                self.init_cost = self.model.cum_cost
-                self.min_cost = self.init_cost
-                self.min_cost_measure = self.top_measure
+    def loop_gens(self, gensiter, cr, cc, cm):
+        for gens in gensiter:
 
-            if self.min_cost is None:
-                self.min_cost = self.model.cum_cost
+            self.generation = Generation(gens)
+            self.generation.gensol = []
+            self.generation.pop.add_random(cr)
+            self.sim_gens(self.generation.pop.random)
+            self.generation.pop.add_mutation(self.genrepo, cm)
+            self.sim_gens(self.generation.pop.mutation)
+            self.generation.pop.add_crossover(self.genrepo, cc)
+            self.sim_gens(self.generation.pop.cross_over)
+            self.genrepo.add_sol(self.generation.gensol)
+            print(f"Generation: {self.generation} Gens Sol {len(self.generation.gensol)}")
+            print(f"GenRepo {len(self.genrepo.gensol)}")
 
-            if self.gen_res == 'S2' and self.cur_pop_best < self.min_cost:
-                self.min_cost = self.cur_pop_best
-                self.gene_latest_best = self.min_cost
-                self.gene_latest_best_measure = self.top_measure
-                self.gen_best_chromosome = self.cur_pop_best_chromosome
-                self.min_cost_measure = self.top_measure
-                new_min_s = self.model.min_s_lower_bound + self.gen_best_chromosome.chromosome.theta_min_s
-                new_max_s = new_min_s + self.gen_best_chromosome.chromosome.theta_max_s
-                self.min_cost_im_min_s = new_min_s
-                self.min_cost_im_max_s = new_max_s
+    def sim_ss_gene(self, chromo):
+        new_min_s = self.model.min_s_lower_bound + chromo.theta_min_s
+        new_max_s = new_min_s + chromo.theta_max_s
+        new_imp = {"im_min_s": self.model.min_s_lower_bound + chromo.theta_min_s, "im_max_s": new_max_s}
+        self.model.reset_im_policy(new_imp)
+        self.sim_sc1("sim ss gen")
 
-            self.opt_hist_tc.append(self.model.cum_cost)
-            self.opt_hist_min_s.append(self.model.im_min_s)
-            self.opt_hist_max_s.append(self.model.im_max_s)
-            self.top_measure += 1
-            self.gene += 1
-
-        opt_plot = plt
-        opt_plot.plot(self.opt_hist_tc)
-
-    def opt_ss_gene(self,pop_num=10):
-
-        """ the function will keep the best solution for this generation"""
-        self.pop_count = 0
-        self.cur_pop_best = None
-        self.cur_pop_best_chromosome = None
-        self.gen_res = None
-
-        while self.pop_count < pop_num:
-            self.pop_candidate()
-            new_theta1 = self.theta_min_s
-            new_theta2 = self.theta_max_s
-
-            if new_theta1 < 0:
-                new_theta1 = 0
-            if new_theta2 < 0:
-                new_theta2 = 0
-
-            new_min_s = self.model.min_s_lower_bound + new_theta1
-            new_max_s = new_min_s + new_theta2
-            new_imp = {"im_min_s": new_min_s, "im_max_s": new_max_s}
-            self.model.reset_im_policy(new_imp)
-            yk_new = self.sim_sc1("y(Theta_k+1")
-
-            if yk_new["cum_otd"] < self.cotd_threshold:
-                print(f"F1:New Theta has the Cumulative OTD rate less than threshold, sol fail~")
-                self.pop_count += 1
+    def sim_gens(self, chromosomes):
+        for gen in chromosomes:
+            if gen.chromosome is None:
                 continue
-
-            if self.cur_pop_best is None:
-                self.cur_pop_best = yk_new["cum_cost"]
-            if yk_new["cum_cost"] < self.cur_pop_best:
-                self.cur_pop_best = yk_new["cum_cost"]
-                # self.cur_pop_best_chromosome = {f"cost:{self.cur_pop_best}, theta1:{self.theta_min_s}, theta2:{self.theta_max_s}"}
-                self.cur_pop_best_chromosome = Chromosomes(self.cur_pop_best, self.theta_min_s, self.theta_max_s)
-                print(f"S2:New Theta has committed the Cumulative OTD rate and lower cost, sol accept~")
-                self.pop_count += 1
+            self.sim_ss_gene(gen.chromosome)
+            if self.model.cum_otd < self.cotd_threshold:
                 continue
-
-        if self.cur_pop_best and self.cur_pop_best_chromosome is not None:
-            self.add_candidate("cur_pop", self.cur_pop_best_chromosome)
-            self.gen_res = "S2"
-
-    def pop_candidate(self):
-        self.theta_min_s = np.random.uniform(0, 1000, size=1)
-        self.theta_max_s = np.random.uniform(0, 2000, size=1)
-
-    def add_candidate(self, base_line, chromosome):
-        sol = chromosome
-        if base_line == "all_gen":
-            self.chromosome_all_gen_pools.append(sol)
-        if base_line == "cur_pop":
-            self.chromosome_cur_pop_pools.append(sol)
+            self.generation.gensol.append((gen.chromosome,self.model.cum_cost))
 
 
 
 
+if __name__ == '__main__':
+    from main import PlanEnv
+    plan_env = PlanEnv
+    opt1 = OptToCostGene(p1=plan_env.env_set, p2=plan_env.cost_set, p3=plan_env.stochastic_set, p4=plan_env.min_s_max_s_set)
+    opt1.sim_measure = 0
+
+    opt1.init_genrepo(1000, 40)
+    gensiter = list(range(1, 10))
+    opt1.loop_gens(gensiter, 10, 10, 10)
+    print(opt1.sim_measure)
+    print("Good!")

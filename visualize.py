@@ -57,5 +57,8 @@ class VisualizeModel:
         # use the previous defined function
         plt.show()
 
+    def plot_scatter(self) -> object:
+        plt.scatter(self.x, self.y)
+        plt.show()
 
 

@@ -1,7 +1,7 @@
 from simulation import Scatter2Dims
 from optimizer_fdsa import OptimizeTotalCostFDSA
 from optimizer_spsa import OptimizeTotalCostSPSA
-from optimizer_gene import OptimizeTotalCostGene
+from optmizer_gene00 import OptimizeTotalCostGene
 
 
 class PlanEnv:

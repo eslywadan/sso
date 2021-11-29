@@ -79,13 +79,13 @@ class InvMdlSingle:
 
     def gen_demand(self):
         self.__reset_demand()
-        self.demand = list(GenDemand.gen_demand(self.demand_avg, self.periods).round())
+        self.demand = list(GenDemand.gen_demand(self.demand_avg, self.periods, self.seed).round())
         # init plan kpi
         self.nsfs_qty = [0] * self.periods
 
     def gen_lt(self):
         self.__reset_order_lt()
-        self.order_lt = list(GenLeadTime.gen_lead(self.order_lt_mu, self.periods).round())
+        self.order_lt = list(GenLeadTime.gen_lead(self.order_lt_mu, self.periods, self.seed).round())
 
     def __demand_fulfill(self, period):
         available = self.start_inv[period] + self.order_received[period]
@@ -191,7 +191,8 @@ class InvMdlSingle:
 class GenDemand:
     """Generate demand"""
     @staticmethod
-    def gen_demand(mu: int = 100, size: int = 100):
+    def gen_demand(mu: int = 100, size: int = 100, seed:int = None):
+        np.random.seed(seed)
         dem = np.random.exponential(mu, size)
         return dem
 
@@ -199,7 +200,8 @@ class GenDemand:
 class GenLeadTime:
     """Generate Lead Time"""
     @staticmethod
-    def gen_lead(theta=6, size: int = 100):
+    def gen_lead(theta=6, size: int = 100, seed:int = None):
+        np.random.seed(seed)
         lead = np.random.poisson(theta, size)
         return lead
 

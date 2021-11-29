@@ -82,8 +82,8 @@ if __name__ == '__main__':
 
     # singleprodfixdemandfdsa(regen_count=5)
 
-    # singleprodfixdemandspsa(regen_count=1)
+     singleprodfixdemandspsa(regen_count=1)
 
-    singleprodfixdemandgene(regen_count=1)
+    # singleprodfixdemandgene(regen_count=1)
 
-    dummy()
+dummy()

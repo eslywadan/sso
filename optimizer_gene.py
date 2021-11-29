@@ -1,4 +1,5 @@
 from simulation import Simulation, IMPOptMea
+from matplotlib import pyplot as plt
 import numpy as np
 import random
 
@@ -12,6 +13,9 @@ class Chromosome:
             self.crossover()
         if self.gentype == 3:
             self.mutation()
+
+    def represent(self):
+        return f"theta_min_s:{int(self.theta_min_s)} theta_max_s: {int(self.theta_max_s)}"
 
     def random(self):
         self.theta_min_s = np.random.uniform(0, 1000, size=1)
@@ -138,6 +142,7 @@ class OptToCostGene(Simulation, Generation):
         self.regen_hist = []
         self.sim_init()
         self.cotd_threshold = 0.9
+        self.measure_count = 0
 
     def init_genrepo(self, max_iter, max_pool):
         self.generation = Generation(0)
@@ -147,8 +152,8 @@ class OptToCostGene(Simulation, Generation):
         self.genrepo.add_sol(self.generation.gensol)
 
     def loop_gens(self, gensiter, cr, cc, cm):
+        self.opt_hist_tc = []
         for gens in gensiter:
-
             self.generation = Generation(gens)
             self.generation.gensol = []
             self.generation.pop.add_random(cr)
@@ -158,8 +163,22 @@ class OptToCostGene(Simulation, Generation):
             self.generation.pop.add_crossover(self.genrepo, cc)
             self.sim_gens(self.generation.pop.cross_over)
             self.genrepo.add_sol(self.generation.gensol)
-            print(f"Generation: {self.generation} Gens Sol {len(self.generation.gensol)}")
+            self.print_opt_result()
+
+    def print_opt_result(self):
+            if len(self.generation.gensol) == 0:
+                print(f"Generation: {self.generation.gens} has not the sol")
+                return
+
+            best_chromosome_in_gen = sorted(self.generation.gensol, key=lambda s: s[1])[0]
+            best_chromosome_in_genrepo = sorted(self.genrepo.gensol, key=lambda s:s[1])[0]
+            print(f"Generation: {self.generation.gens} Gens Sol {len(self.generation.gensol)}")
+            print(f"Best Chromosome in the gen: Cost: {int(best_chromosome_in_gen[1])}, "
+                  f"Theta: {best_chromosome_in_gen[0].represent()} ")
             print(f"GenRepo {len(self.genrepo.gensol)}")
+            print(f"Best Chromosome in the genrepo:Cost: {int(best_chromosome_in_genrepo[1][0])},"
+                  f" Theta: {best_chromosome_in_genrepo[0].represent()}")
+            self.opt_hist_tc.append(int(best_chromosome_in_genrepo[1][0]))
 
     def sim_ss_gene(self, chromo):
         new_min_s = self.model.min_s_lower_bound + chromo.theta_min_s
@@ -167,6 +186,7 @@ class OptToCostGene(Simulation, Generation):
         new_imp = {"im_min_s": self.model.min_s_lower_bound + chromo.theta_min_s, "im_max_s": new_max_s}
         self.model.reset_im_policy(new_imp)
         self.sim_sc1("sim ss gen")
+        self.measure_count += 1
 
     def sim_gens(self, chromosomes):
         for gen in chromosomes:
@@ -178,16 +198,19 @@ class OptToCostGene(Simulation, Generation):
             self.generation.gensol.append((gen.chromosome,self.model.cum_cost))
 
 
-
-
-if __name__ == '__main__':
+def test_gen_opt(max_iter=60, max_pool=40, gensiter=10, cr=10, cc=10, cm=10):
     from main import PlanEnv
     plan_env = PlanEnv
     opt1 = OptToCostGene(p1=plan_env.env_set, p2=plan_env.cost_set, p3=plan_env.stochastic_set, p4=plan_env.min_s_max_s_set)
     opt1.sim_measure = 0
-
-    opt1.init_genrepo(1000, 40)
-    gensiter = list(range(1, 10))
-    opt1.loop_gens(gensiter, 10, 10, 10)
-    print(opt1.sim_measure)
+    opt1.init_genrepo(max_iter, max_pool)
+    gensiter = list(range(1, gensiter))
+    opt1.loop_gens(gensiter, cr, cc, cm)
+    print(f"total measure: {opt1.sim_measure} measure count: {opt1.measure_count}")
+    opt_plot = plt
+    opt_plot.plot(opt1.opt_hist_tc)
     print("Good!")
+
+
+if __name__ == '__main__':
+    test_gen_opt(max_iter=30, max_pool=30, gensiter=300, cr=10, cc=10, cm=10)

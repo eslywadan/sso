@@ -35,13 +35,14 @@ class Simulation:
     def __init__(self, p1, p2, p3, p4):
         self.model = InvMdlSingle(p1, p2, p3, p4)
 
-    def sim_init(self):
+    def sim_init(self, seed=None):
         """Init the simulation """
+        self.model.seed = seed
         self.model.gen_demand()
         self.model.gen_lt()
         self.model.reset_plan()
         self.model.init_ss()
-        Scatter2Dims.plot_dist_scatter(self.model.demand, self.model.order_lt)
+        # Scatter2Dims.plot_dist_scatter(self.model.demand, self.model.order_lt)
 
     def sim_sc1(self, pid: string) -> dict:
         """Simulate Scenario 1 approach re-plan by keeping demand and LT   """
@@ -50,6 +51,14 @@ class Simulation:
         self.sim_measure += 1
         self.sim_hist.append(self.model.cum_cost)
         return self.outline_plan_res(pid)
+
+    def sim_simple(self, seed=None):
+        """Sim with Init """
+        self.model.seed = seed
+        self.model.gen_demand()
+        self.model.gen_lt()
+        self.model.reset_plan()
+        self.model.bal_all()
 
     def sim_sc2(self):
         """Simulate Scenario 2 approach re-plan by keeping demand and regen LT   """
@@ -111,3 +120,9 @@ class Scatter2Dims:
         p1 = VisualizeModel(x, y)
         p1.plot_scatter_hist()
 
+
+if __name__ == '__main__':
+    from main import PlanEnv as plan_env
+    testSim = Simulation(p1=plan_env.env_set, p2=plan_env.cost_set, p3=plan_env.stochastic_set,
+                         p4=plan_env.min_s_max_s_set)
+    breakpoint()

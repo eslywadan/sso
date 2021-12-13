@@ -120,7 +120,6 @@ class Genrepo(Generation):
         if after_num <= before_num:
             print(f"Original gensol {before_num}")
             print(f"After gensol {after_num}")
-            breakpoint()
 
         self.prun_sol()
 
@@ -129,7 +128,7 @@ class Genrepo(Generation):
         self.gensol = sols[0:self.max_pool-1]
 
 
-class OptToCostGene(Simulation, Generation):
+class OptToCostGene(Generation):
 
     imp_opt_mea = IMPOptMea
     generation: Generation
@@ -137,16 +136,16 @@ class OptToCostGene(Simulation, Generation):
     chromosome: Chromosome
     print_res = None
 
-    def __init__(self, p1, p2, p3, p4):
-        Simulation.__init__(self, p1, p2, p3, p4)
+    def __init__(self, p1, p2, p3, p4, cotd_th=0.85):
+        self.sim = Simulation(p1, p2, p3, p4)
         self.regen_hist = []
-        self.sim_init()
-        self.cotd_threshold = 0.9
+        self.sim.sim_init()
+        self.cotd_threshold = cotd_th
         self.measure_count = 0
 
-    def init_genrepo(self, max_iter, max_pool):
+    def init_genrepo(self, max_pool):
         self.generation = Generation(0)
-        self.generation.pop.add_random(max_iter)
+        self.generation.pop.add_random()
         self.sim_gens(self.generation.pop.random)
         self.genrepo = Genrepo(max_pool)
         self.genrepo.add_sol(self.generation.gensol)
@@ -181,11 +180,12 @@ class OptToCostGene(Simulation, Generation):
             self.opt_hist_tc.append(int(best_chromosome_in_genrepo[1][0]))
 
     def sim_ss_gene(self, chromo):
-        new_min_s = self.model.min_s_lower_bound + chromo.theta_min_s
+        new_min_s = self.sim.model.min_s_lower_bound + chromo.theta_min_s
         new_max_s = new_min_s + chromo.theta_max_s
-        new_imp = {"im_min_s": self.model.min_s_lower_bound + chromo.theta_min_s, "im_max_s": new_max_s}
-        self.model.reset_im_policy(new_imp)
-        self.sim_sc1("sim ss gen")
+        new_imp = {"im_min_s": self.sim.model.min_s_lower_bound + chromo.theta_min_s, "im_max_s": new_max_s}
+        self.sim.model.reset_im_policy(new_imp)
+        self.sim.print_res = False
+        self.sim.sim_sc1("sim ss gen")
         self.measure_count += 1
 
     def sim_gens(self, chromosomes):
@@ -193,24 +193,33 @@ class OptToCostGene(Simulation, Generation):
             if gen.chromosome is None:
                 continue
             self.sim_ss_gene(gen.chromosome)
-            if self.model.cum_otd < self.cotd_threshold:
+            if self.sim.model.cum_otd < self.cotd_threshold:
                 continue
-            self.generation.gensol.append((gen.chromosome,self.model.cum_cost))
+            self.generation.gensol.append((gen.chromosome,self.sim.model.cum_cost))
 
 
-def test_gen_opt(max_iter=60, max_pool=40, gensiter=10, cr=10, cc=10, cm=10):
+def test_gen_opt(max_pool=40, cr=10, cc=10, cm=10, gensiter=10):
     from main import PlanEnv
     plan_env = PlanEnv
     opt1 = OptToCostGene(p1=plan_env.env_set, p2=plan_env.cost_set, p3=plan_env.stochastic_set, p4=plan_env.min_s_max_s_set)
-    opt1.sim_measure = 0
-    opt1.init_genrepo(max_iter, max_pool)
+    opt1.sim.sim_measure = 0
+    opt1.init_genrepo(max_pool)
     gensiter = list(range(1, gensiter))
     opt1.loop_gens(gensiter, cr, cc, cm)
-    print(f"total measure: {opt1.sim_measure} measure count: {opt1.measure_count}")
+    print(f"total measure: {opt1.sim.sim_measure} measure count: {opt1.measure_count}")
     opt_plot = plt
     opt_plot.plot(opt1.opt_hist_tc)
     print("Good!")
 
 
 if __name__ == '__main__':
-    test_gen_opt(max_iter=30, max_pool=30, gensiter=300, cr=10, cc=10, cm=10)
+    test_gen_opt(max_pool=30, cr=10, cc=10, cm=10, gensiter=300)
+
+
+""" 
+    max_pool : 
+    cr       :
+    cc       :
+    cm       :
+    gensiter :
+"""

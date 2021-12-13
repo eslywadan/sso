@@ -10,6 +10,7 @@ import seaborn as sns
 
 from controlled_random import ControlRandomNumber as crn
 from simulation import Simulation
+from block_run import BlockRun
 from main import PlanEnv as plan_env
 
 
@@ -229,37 +230,6 @@ def plot_reg_model(fit_ols_res):
         ax.plot(x, iv_u, "r--")
         ax.plot(x, iv_l, "r--")
         i += 1
-
-
-class BlockRun:
-
-    def __init__(self, ctl_ran:crn):
-        self.ctl_ran = ctl_ran
-        self.avg_cost = 0
-        self.sum_cost = 0
-        self.avg_otd = 0
-        self.sum_otd = 0
-        self.sum_fulfill_demand = 0
-        self.avg_fulfill_demand = 0
-
-    def block_avg(self, sim_model:Simulation, shuffle=True):
-        if shuffle is True:
-            np.random.shuffle(self.ctl_ran.seed_seq)
-            # print(f"Shuffle is {shuffle}, the random seed is shuffled!")
-        while self.ctl_ran.cur_seed_ix < self.ctl_ran.seed_num-1:
-            sim_model.sim_simple(self.ctl_ran.cur_seed)
-            self.sum_cost += sim_model.model.cum_cost
-            self.sum_otd += sim_model.model.cum_otd
-            self.sum_fulfill_demand  += sim_model.model.cum_fulfill_qty
-            # print(f"min_s:{sim_model.model.im_min_s},max_s:{sim_model.model.im_max_s}, "
-            #      f"cum_cost: {sim_model.model.cum_cost},cum_otd: {sim_model.model.cum_otd} ")
-            self.ctl_ran.next_as_cur_ix()
-
-        self.ctl_ran.next_as_cur_ix()
-        self.avg_cost = self.sum_cost/self.ctl_ran.seed_num
-        self.avg_otd = self.sum_otd/self.ctl_ran.seed_num
-        self.avg_fulfill_demand = self.sum_fulfill_demand/self.ctl_ran.seed_num
-        # print(f"avg_cost: {self.avg_cost},avg_otd: {self.avg_otd} ")
 
 
 class RSModel:
